@@ -16,6 +16,7 @@ Output:
 1. Resumes sorted by closeness/proximity score to the job description.
 
 Model Fine Tuning:
+
 Provide a way to fine tune the model based on human feedback. Humans will mark the resumes
 with a rating (BEST, GOOD, AVERAGE, BAD) on how well they match the job description.
 Given these human ratings, the model should fine tune itself
