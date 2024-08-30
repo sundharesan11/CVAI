@@ -1,0 +1,20 @@
+
+div[data-testid="column"] > div:first-child {
+    background-color: #d6d6d6; 
+    padding: 20px;
+    border-radius: 10px;
+}
+div[data-testid="column"] > div:last-child {
+    background-color: #d6d6d6;
+    padding: 20px;
+    border-radius: 10px;
+}
+.title {
+    background-color: #949494;
+    color: #0c033a; 
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    padding: 20px;
+    border-radius: 10px;
+}
