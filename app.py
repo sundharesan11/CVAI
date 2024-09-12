@@ -30,10 +30,10 @@ def load_js(js_file):
     with open(js_file, "r") as f:
         js_code = f.read()
     return js_code
-
-scroll_js = load_js("utilities\\scroll_script.js")
-
 custom_css = load_css("utilities\\styles.css")
+scroll_js = load_js("utilities\scroll_script.js")
+
+
 
 st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
 st.markdown(f"<script>{scroll_js}</script>", unsafe_allow_html=True)
