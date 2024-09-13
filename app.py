@@ -223,7 +223,7 @@ def main():
     <br>
     <a class="navigation-link" href="#process-files" onclick="smoothScrollTo('process-files')">Process Files</a>
     <br>
-    <a class="navigation-link" href="#Get Matching Resumes" onclick="smoothScrollTo('Get Matching Resumes')">Get Matching Resumes</a>
+    <a class="navigation-link" href="#get-matching-resumes" onclick="smoothScrollTo('get-matching-resumes')">Get Matching Resumes</a>
     """, unsafe_allow_html=True)
 
     with st.container():
@@ -303,7 +303,7 @@ def main():
         st.markdown("</div>", unsafe_allow_html=True)
 
     with st.container():
-        st.markdown("<div data-testid='Get Matching Resumes'>", unsafe_allow_html=True)
+        st.markdown("<div data-testid='get-matching-resumes'>", unsafe_allow_html=True)
         st.header("Get Matching Resumes")
         st.markdown("##### Select Resumes to be processed")
         
