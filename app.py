@@ -13,9 +13,35 @@ import numpy as np
 import faiss
 import time
 from tryouts.embedding import preprocess, generate_bert_embedding, tokenizer, model
-
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
+
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+def initialize_firebase():
+    try:
+        firebase_credentials = st.secrets["firebase"]["credentials"]
+        cred = credentials.Certificate(eval(firebase_credentials))
+        
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app(cred, {
+                'storageBucket': 'cvai-92a44.appspot.com'
+            })
+            logger.info("Firebase initialized successfully.")
+        else:
+            logger.info("Firebase already initialized.")
+    except KeyError:
+        logger.error("Error: Firebase credentials not found in secrets.")
+    except FileNotFoundError:
+        logger.error("Error: Service account key file not found. Please check the path.")
+    except Exception as e:
+        logger.error(f"An error occurred while initializing Firebase: {e}")
+
+initialize_firebase()
 
 
 st.set_page_config(layout="wide")
@@ -38,12 +64,20 @@ st.markdown(f"<script>{scroll_js}</script>", unsafe_allow_html=True)
 
 
 
-def initialize_firebase():
-    if not firebase_admin._apps:
-        cred = credentials.Certificate("utilities/cvai-92a44-firebase-adminsdk-ne70g-d566124d0d.json")
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': 'cvai-92a44.appspot.com'
-        })
+# def initialize_firebase():
+#     try:
+#         if not firebase_admin._apps: 
+#             cred = credentials.Certificate("utilities\cvai-92a44-firebase-adminsdk-ne70g-0d2f0c7a8e.json")
+#             firebase_admin.initialize_app(cred, {
+#                 'storageBucket': 'cvai-92a44.appspot.com'
+#             })
+#             print("Firebase initialized successfully.")
+#         else:
+#             print("Firebase already initialized.")
+#     except FileNotFoundError:
+#         print("Error: Service account key file not found. Please check the path.")
+#     except Exception as e:
+#         print(f"An error occurred while initializing Firebase: {e}")
 
 
 def upload(file, folder):
@@ -178,7 +212,7 @@ def resume_embedding(df):
 
 
 def main():
-    initialize_firebase()
+    
     db = firestore.client()
 
     st.sidebar.title("Navigation")
