@@ -26,7 +26,6 @@ def initialize_firebase():
     try:
         firebase_credentials = st.secrets["firebase"]["credentials"]
         cred = credentials.Certificate(eval(firebase_credentials))
-        
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred, {
                 'storageBucket': 'cvai-92a44.appspot.com'
