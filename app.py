@@ -14,6 +14,7 @@ import faiss
 import time
 from tryouts.embedding import preprocess, generate_bert_embedding, tokenizer, model
 import os
+from datetime import timedelta
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 
@@ -96,6 +97,20 @@ def upload(file, folder):
 def list_files(folder):
     bucket = storage.bucket()
     blobs = bucket.list_blobs(prefix=folder)
+    
+    expiration_time = timedelta(hours=1)
+    files = []
+    for blob in blobs:
+        if blob.name.endswith("/"):
+            continue 
+        
+        signed_url = blob.generate_signed_url(expiration=expiration_time)
+        files.append((blob.name.split("/")[-1], signed_url))
+    return files
+
+def list_files_raw(folder):
+    bucket = storage.bucket()
+    blobs = bucket.list_blobs(prefix=folder)
     return [(blob.name.split("/")[-1], blob.public_url) for blob in blobs if blob.name != folder]
 
 def download_textfile(bucket_name, file_name):
@@ -145,8 +160,7 @@ def extract_text_from_pdf(pdf_file):
     return text
 
 def extract_text_from_txt(txt_file):
-    with open(txt_file, 'r', encoding='utf-8') as file:
-        text = file.read()
+    text = txt_file.read().decode('utf-8')
     return text
 
 def save_text_to_file(file_name, text, folder_name):
@@ -189,11 +203,7 @@ def get_latest_jd_file():
 def read_blob_as_text(blob):
     return blob.download_as_text()
 
-def jd_embedding():
-    latest_jd_blob = get_latest_jd_file()
-    job_description = read_blob_as_text(latest_jd_blob)
-    st.write("**Given Job Description:**")
-    st.write(job_description)
+def jd_embedding(job_description):
     job_description_text = preprocess(job_description)
     job_description_embedding = generate_bert_embedding(job_description_text, tokenizer, model)
     return job_description_embedding
@@ -232,7 +242,7 @@ def main():
 
         uploaded_resumes = st.file_uploader("**Upload Resumes**", type=["pdf", "png", "jpg", "jpeg", "txt"], key="resume", accept_multiple_files=True)
 
-        uploaded_jd = st.file_uploader("**Upload Job Description**", type=["pdf", "png", "jpg", "jpeg", "txt"], key="jd")
+        uploaded_jds = st.file_uploader("**Upload Job Description**", type=["pdf", "png", "jpg", "jpeg", "txt"], key="jd", accept_multiple_files=True)
 
 
         if uploaded_resumes is not None:
@@ -245,13 +255,19 @@ def main():
 
                         text = extract_text_from_pdf(uploaded_resume)
                         text_file_url = upload_text(text, 'processed_resume', uploaded_resume.name.replace('.pdf', '.txt'))
-                        st.success(f"Extracted text uploaded to Firebase Storage: {text_file_url}")                
+                        st.success(f"Extracted text from resumes uploaded to Firebase Storage: {text_file_url}")                
 
-        if uploaded_jd is not None:
-            folder_name = 'JobDescription'
-            with st.spinner('Uploading Job Description...'):
-                file_url = upload(uploaded_jd, folder_name)
-                st.success(f"Job Description uploaded to Firebase Storage: {file_url}")
+        if uploaded_jds is not None:
+            for uploaded_jd in uploaded_jds:
+                if uploaded_jd is not None:
+                    folder_name = 'JobDescription'
+                    with st.spinner('Uploading Job Description...'):
+                        file_url = upload(uploaded_jd, folder_name)
+                        st.success(f"Job Description uploaded to Firebase Storage: {file_url}")
+
+                        text = extract_text_from_txt(uploaded_jd)
+                        text_file_url = upload_text(text, 'processed_jd', uploaded_jd.name.replace('.pdf', '.txt'))
+                        st.success(f"Extracted text from jd uploaded to Firebase Storage: {text_file_url}")  
         st.markdown("</div>", unsafe_allow_html=True)
 
     with st.container():
@@ -305,55 +321,79 @@ def main():
     with st.container():
         st.markdown("<div data-testid='get-matching-resumes'>", unsafe_allow_html=True)
         st.header("Get Matching Resumes")
+        
+        if 'selected_resumes' not in st.session_state:
+            st.session_state.selected_resumes = []
+        
+        if 'selected_jd' not in st.session_state:
+            st.session_state.selected_jd = None
+
         st.markdown("##### Select Resumes to be processed")
         
-        if 'selected_files' not in st.session_state:
-            st.session_state.selected_files = []
-
-        file_names = list_files('processed_resume')
+        resume_files = list_files_raw('processed_resume')
         
-        st.write("Files found:", len(file_names))
+        st.write("Files found:", len(resume_files))
         
-        if file_names:
-            for file_name in file_names:
-                file_name_str = str(file_name) 
-                clean_file_name = file_name_str.split('/')[-1].strip("()' ")
-                clean_file_name = clean_file_name.rsplit('.', 1)[0]
+        if resume_files:
+            for resume_file in resume_files:
+                resume_file_str = str(resume_file) 
+                clean_resume_name = resume_file_str.split('/')[-1].strip("()' ")
+                clean_resume_name = clean_resume_name.rsplit('.', 1)[0]
 
-                is_selected = st.checkbox(clean_file_name, key=f"checkbox_{file_name_str}")
+                is_selected = st.checkbox(clean_resume_name, key=f"resume_checkbox_{resume_file_str}")
+                
                 if is_selected:
-                    if file_name_str not in st.session_state.selected_files:
-                        st.session_state.selected_files.append(file_name_str)
+                    if resume_file_str not in st.session_state.selected_resumes:
+                        st.session_state.selected_resumes.append(resume_file_str)
                 else:
-                    if file_name_str in st.session_state.selected_files:
-                        st.session_state.selected_files.remove(file_name_str)
+                    if resume_file_str in st.session_state.selected_resumes:
+                        st.session_state.selected_resumes.remove(resume_file_str)
         else:
-            st.write("No files available to select.")
-                       
+            st.write("No resumes available to select.")
+        
+        st.markdown("##### Select Job Description (JD) to process")
+        
+        jd_files = list_files_raw('processed_jd') 
+        
+        if jd_files:
+            selected_jd_name = st.selectbox("Choose a JD:", [str(jd_file).split('/')[-1].strip("()' ") for jd_file in jd_files])
+            
+            if selected_jd_name:
+                st.session_state.selected_jd = selected_jd_name
+        else:
+            st.write("No JDs available for selection.")
+        
         top_n = st.number_input('Number of Top matching resumes', min_value=1, max_value=100, value=5)
 
         if st.button("Get Matching Resumes"):
-            selected_files = st.session_state.selected_files
-            if selected_files:
+            selected_resumes = st.session_state.selected_resumes
+            selected_jd = st.session_state.selected_jd
+            
+            if selected_resumes and selected_jd:
                 data = []
-                for file_name in selected_files:
-                    file_name = file_name.split(",")[0].strip("()' ")
-                    content = download_textfile('cvai-92a44.appspot.com', "processed_resume"+"/"+file_name)
-                    data.append({'Filename': file_name.split('/')[-1], 'Content': content})
+                for resume_file in selected_resumes:
+                    resume_file = resume_file.split(",")[0].strip("()' ")
+                    content = download_textfile('cvai-92a44.appspot.com', "processed_resume" + "/" + resume_file)
+                    data.append({'Filename': resume_file.split('/')[-1].rsplit('.', 1)[0], 'Content': content})
 
                 df = pd.DataFrame(data)
 
                 csv_file_path = 'processed_resumes.csv'
                 df.to_csv(csv_file_path, index=False)
+                
                 index = resume_embedding(df)
-                jd_embed = jd_embedding() 
+                jd_content = download_textfile('cvai-92a44.appspot.com', "processed_jd" + "/" + selected_jd)
+                jd_embed = jd_embedding(jd_content)  
+                
                 distances, indices = index.search(np.array([jd_embed]), top_n)
                 top_resumes = df.iloc[indices[0]].reset_index(drop=True)
-                st.write(f"**Top {top_n} Matching resumes:**")
+                
+                st.write(f"**Top {top_n} Matching resumes for JD: {selected_jd}:**")
                 st.write(top_resumes['Filename'])
+            else:
+                st.write("Please select both resumes and a JD before proceeding.")
 
         st.markdown("</div>", unsafe_allow_html=True)
-                
 
 
 if __name__ == "__main__":

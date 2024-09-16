@@ -1,5 +1,53 @@
 Filename,Content
-Kishore-Kumar-S-K-FlowCV-Resume-20240720 (2).txt.txt,"Kishore Kumar S K 
+Rahul_Resume_,"Rahul Bhimakari
++91-9483849803 |GMail |LinkedIn |GITHUB
+Education
+National Institute of Technology Karnataka Surathkal 2022-2026
+Bachelor of Technology in Computer Science and Engineering, Minors in Artificial Intelligence CGPA:8.43
+Experience
+HALE Lab, NITK Apr 2024 – July 2024
+Research Intern
+•Utilized NASA platforms such as NSIDC, JPL to acquire and curate datasets from geosatellites including SMAP,
+SMOS and MODIS to obtain data for Sea Surface Salinity over the past 5 years for 20 data points.
+•Implemented data subsetting and preprocessing techniques to focus on coastal regions near Mangalore.
+•Conducted extensive research on time series analysis and developed advanced deep learning models, employing Graph
+Convolutional Networks and Feed Forward Neural Networks for future series prediction.
+Projects
+Twitter Feed Filter |Python, NLP, Deep Learning, BeautifulSoup Feb 2023 – May 2023
+•Designed a sophisticated model to automatically identify and filter out irrelevant tweets from a user’s feed based on
+specific trends and user interests.
+•Utilized BeautifulSoup for web scraping to efficiently scrape and gather large volumes of relevant data from
+Twitter, ensuring a comprehensive dataset for model training and validation.
+•Applied NLP and deep learning techniques to enhance the performance of the tweet classification process.
+Image Upscaling |Python, Tensorflow, OpenCV, Deep Learning Dec 2023 – Mar 2024
+•Developed a web application using Flask to serve a REST API, with HTML, CSS, and Bootstrap for the frontend.
+•Created an integrated model to enhance the brightness of low-light images and perform super-resolution on the
+enhanced images.
+•Utilized TensorFlow and Keras to develop a CNN-based self-supervised computer vision model.
+•Trained the model using Zero-DCE for brightness enhancement and GAN for super-resolution of images.
+Pix2Pix GAN for Image Translation |Python, Deep Learning, Tensorflow Jan 2024 – Mar 2024
+•Developed and trained generative models using the Pix2Pix framework, incorporating both PatchGAN and a
+Wasserstein loss critic.
+•Trained the model to convert given Satellite images into Google Maps representations using the generative
+adversarial setup.
+•Conducted an analysis of model performance and concluded that PatchGAN achieves SSIM score of 0.787.
+Technical Skills
+Languages : Python, C/C++, SQL (MySQL), JavaScript, HTML/CSS
+Frameworks : Linux, Tensorflow, Keras, Pandas, NumPy
+Clubs and Extra-Curricular Activities
+Web Enthusiasts’ Club Nov 2023 – Present
+•Member of the INTEL sig concerned to Machine Learning and Artificial Intelligence.
+IET - Cipher Dec 2022 – Present
+•Conducted KSS on Machine Learning and NLP and handled ML related activities within the club.
+Achievements
+•Competitive Programming : Solved more than 400 CP problems and achieved max rating of 1240 on Codeforces
+and rating of 1735 with 3 stars on Codechef and solved more than 500 problems on LeetCode
+•KCET Rank : 298
+•NTSE Scholar : Secured in 2020
+•JEE Mains : Secured 99.6 percentile
+•Volunteer : Worked with Incident 2026 Operations team and NSS squad
+•Competitions : Achieved Global rank of 506 among 17000 teams in IEEE Xtreme 17.0."
+Kishore-Kumar-S-K-FlowCV-Resume-20240720 (2).txt,"Kishore Kumar S K 
 kishorekumarsk24@gmail.com Mechanical Engineer
  
 Designing Software
@@ -54,7 +102,7 @@ Automobiles
 Profile
 •Gained a basic understanding of rocket
 design principles. •"
-Muskan_Tolani.txt,"Muskan Tolani
+Muskan_Tolani,"Muskan Tolani
 7977562838 |muskantolani7@gmail.com |LinkedIn: Muskan Tolani |GitHub: Muskantolani
 Education
 Thadomal Shahani Engineering College Bandra, Mumbai
