@@ -16,12 +16,10 @@ from tryouts.embedding import preprocess, generate_bert_embedding, tokenizer, mo
 import os
 from datetime import timedelta
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-
-
 import logging
-
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
 
 def initialize_firebase():
     try:
@@ -203,15 +201,22 @@ def get_latest_jd_file():
 def read_blob_as_text(blob):
     return blob.download_as_text()
 
+
+def normalize_embedding(embedding):
+    return embedding / np.linalg.norm(embedding)
+
+
 def jd_embedding(job_description):
     job_description_text = preprocess(job_description)
     job_description_embedding = generate_bert_embedding(job_description_text, tokenizer, model)
+    job_description_embedding = normalize_embedding(job_description_embedding)
     return job_description_embedding
 
 
 def resume_embedding(df):
     df['preprocessed_content'] = df['Content'].apply(preprocess)
-    df['resume_embedding'] = df['preprocessed_content'].apply(lambda x: generate_bert_embedding(x, tokenizer, model))
+    df['resume_embedding'] = df['preprocessed_content'].apply(lambda x: normalize_embedding(generate_bert_embedding(x, tokenizer, model)))
+    # df['resume_embedding'] = df['preprocessed_content'].apply(lambda x: generate_bert_embedding(x, tokenizer, model))
     resume_embeddings = np.vstack(df['resume_embedding'].values)
     embedding_dim = resume_embeddings.shape[1]
     index = faiss.IndexFlatL2(embedding_dim)  
@@ -221,7 +226,6 @@ def resume_embedding(df):
 
 
 def main():
-    
     db = firestore.client()
 
     st.sidebar.title("Navigation")
