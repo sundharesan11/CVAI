@@ -12,7 +12,8 @@ import pandas as pd
 import numpy as np
 import faiss
 import time
-from tryouts.embedding import preprocess, generate_bert_embedding, tokenizer, model
+# from tryouts.embedding import preprocess, generate_bert_embedding, tokenizer, model
+from tryouts.embedding import preprocess, model
 import os
 from datetime import timedelta
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
@@ -202,24 +203,28 @@ def read_blob_as_text(blob):
     return blob.download_as_text()
 
 
-def normalize_embedding(embedding):
-    return embedding / np.linalg.norm(embedding)
+# def normalize_embedding(embedding):
+#     return embedding / np.linalg.norm(embedding)
 
 
 def jd_embedding(job_description):
     job_description_text = preprocess(job_description)
-    job_description_embedding = generate_bert_embedding(job_description_text, tokenizer, model)
-    job_description_embedding = normalize_embedding(job_description_embedding)
+    # job_description_embedding = generate_bert_embedding(job_description_text, tokenizer, model)
+    # job_description_embedding = normalize_embedding(job_description_embedding)
+    job_description_embedding = model.encode(job_description_text, convert_to_numpy=True)
+
     return job_description_embedding
 
 
 def resume_embedding(df):
     df['preprocessed_content'] = df['Content'].apply(preprocess)
-    df['resume_embedding'] = df['preprocessed_content'].apply(lambda x: normalize_embedding(generate_bert_embedding(x, tokenizer, model)))
+    df['resume_embedding'] = df['preprocessed_content'].apply(lambda x: model.encode(x, convert_to_numpy=True))
+
+    # df['resume_embedding'] = df['preprocessed_content'].apply(lambda x: normalize_embedding(generate_bert_embedding(x, tokenizer, model)))
     # df['resume_embedding'] = df['preprocessed_content'].apply(lambda x: generate_bert_embedding(x, tokenizer, model))
     resume_embeddings = np.vstack(df['resume_embedding'].values)
     embedding_dim = resume_embeddings.shape[1]
-    index = faiss.IndexFlatL2(embedding_dim)  
+    index = faiss.IndexFlatIP(embedding_dim)  
     index.add(resume_embeddings) 
     return index
 

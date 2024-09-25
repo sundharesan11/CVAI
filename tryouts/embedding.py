@@ -6,10 +6,16 @@ import pandas as pd
 import faiss
 import numpy as np
 import os
+from sentence_transformers import SentenceTransformer
+import numpy as np
+import faiss
 nlp = spacy.load('en_core_web_sm')
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertModel.from_pretrained('bert-base-uncased')
+# tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+# model = BertModel.from_pretrained('bert-base-uncased')
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
 
 
 
