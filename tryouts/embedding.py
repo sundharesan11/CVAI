@@ -36,3 +36,13 @@ def generate_bert_embedding(text, tokenizer, model):
     embedding = outputs.last_hidden_state[:, 0, :].squeeze().numpy()
     return embedding
 
+
+def process_text(input_text):
+    cleaned_text = re.sub(r'[^A-Za-z\s]', '', input_text)
+    
+    words = cleaned_text.split()
+    
+    processed_words = [word.capitalize() if word.isupper() else word for word in words]
+    
+    return ' '.join(processed_words)
+
