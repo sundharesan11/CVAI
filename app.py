@@ -307,8 +307,6 @@ def main():
         jds = list_files('JobDescription')
         if jds:            
             clicked_file = None 
-            if clicked_file != None:
-                st.subheader(clicked_file)
             for name, url in jds:
                 col1, col2 = st.columns([3, 1])
                 with col1:
@@ -320,7 +318,7 @@ def main():
 {f2}"""
                     if st.button(button_label, key=f"file_{name}"): 
                         clicked_file = name  
-                        st.write(f"You selected: {clicked_file}")
+                        # st.write(f"You selected: {clicked_file}")
                 with col2:
                     st.markdown(f"[Open JD]({url})")     
                 st.markdown("<hr>", unsafe_allow_html=True)
