@@ -1,7 +1,8 @@
 import firebase_admin
-from firebase_admin import credentials, storage, firestore
+from firebase_admin import db, credentials, storage, firestore
 import streamlit as st
 import os
+import re
 import requests
 from io import BytesIO
 import fitz
@@ -16,6 +17,7 @@ import os
 # from tryouts.embedding import preprocess, generate_bert_embedding, tokenizer, model
 from tryouts.embedding import preprocess, process_text, model
 from tryouts.summarizer import summarize
+from tryouts.llm_score import query_api
 from datetime import timedelta
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 import logging
@@ -29,7 +31,9 @@ def initialize_firebase():
         cred = credentials.Certificate(eval(firebase_credentials))
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred, {
-                'storageBucket': 'cvai-92a44.appspot.com'
+                'storageBucket': 'cvai-92a44.appspot.com',
+                'databaseURL': 'https://cvai-92a44-default-rtdb.asia-southeast1.firebasedatabase.app/'
+
             })
             logger.info("Firebase initialized successfully.")
         else:
@@ -84,6 +88,26 @@ def list_files(folder):
         signed_url = blob.generate_signed_url(expiration=expiration_time)
         files.append((blob.name.split("/")[-1], signed_url))
     return files
+
+def list_resume_files_with_url(folder):
+    bucket = storage.bucket()
+    blobs = bucket.list_blobs(prefix=folder)
+    
+    expiration_time = timedelta(hours=1)
+    resume_files = {}
+    
+    for blob in blobs:
+        if blob.name.endswith("/"):
+            continue 
+        
+        signed_url = blob.generate_signed_url(expiration=expiration_time)
+        resume_filename = blob.name.split("/")[-1]
+        resume_files[resume_filename] = signed_url
+        
+    return resume_files
+
+
+
 
 def list_files_raw(folder):
     bucket = storage.bucket()
@@ -216,6 +240,51 @@ def resume_embedding(df):
     index.add(resume_embeddings) 
     return index
 
+def list_resume_files(folder_name):
+    bucket = storage.bucket()
+    blobs = bucket.list_blobs(prefix=folder_name + '/')  # List files with the specified prefix
+    resume_files = [blob.name.split('/')[-1] for blob in blobs if blob.name.endswith('.txt')]
+    
+    return resume_files
+
+def sanitize_firebase_path(path):
+    path = path.replace(" ", "_")
+    sanitized_path = re.sub(r'[.#$[\]]', '_', path)
+    
+    return sanitized_path
+def get_match_score(jd_filename, resume_filename, model):
+    cache_key = f"{jd_filename}_{resume_filename}_{model}"
+    cache_key = sanitize_firebase_path(cache_key)
+    ref = db.reference(f"api_scores/{cache_key}")
+    cached_score = ref.get() 
+    if cached_score:
+        return cached_score 
+    else:
+        jd_content = download_textfile('cvai-92a44.appspot.com', "processed_jd" + "/" + jd_filename)
+        resume_content = download_textfile('cvai-92a44.appspot.com', "processed_resume" + "/" + resume_filename)
+        
+        score = query_api(model, jd_content, resume_content)
+        
+        ref.set(score)  
+        
+        return score 
+    
+def get_match_scores_for_jd(jd_filename, all_resumes, model):
+    scores = {}  
+    for resume_filename, resume_url in all_resumes:
+        score = get_match_score(jd_filename, resume_filename, model)
+        scores[resume_filename] = (float(score), resume_url)
+    
+    sorted_scores = sorted(scores.items(), key=lambda item: item[1][0], reverse=True)
+
+    df_scores = pd.DataFrame(
+        [(filename, score[0], score[1]) for filename, score in sorted_scores], 
+        columns=['Filename', 'Score', 'URL']
+    )
+    
+    df_scores.to_csv("sample.csv")
+    return df_scores
+
 
 
 def main():
@@ -270,8 +339,15 @@ def main():
                         text_file_url2 = upload_text(jd_summary, 'summary_jd', uploaded_jd.name.replace('.pdf', '.txt'))
                         st.success(f"Extracted text from jd uploaded to Firebase Storage: {text_file_url}")  
         st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.subheader("Available Files")
+
+
+
+    options = ['Cosine Similarity', 'OpenAI-Score', 'Gemini-Score', 'Claude-Score']
+    st.write("### Choose an option:")
+    selected_option = options[0]
+
+    selected_option = st.radio("", options, horizontal=True)
+
 
     # col3, col4 = st.columns(2)
     
@@ -324,44 +400,66 @@ def main():
                 st.markdown("<hr>", unsafe_allow_html=True)
             if clicked_file:
                 with col6:
-                    st.subheader(f"Top {top_n} resumes matching the selected Job Description")
-                    data = []
-                    resumes = list_files('CVs')
-                    for resume_file, url in resumes:
-                        print("")
-                        resume_file = str(resume_file)
-                        resume_file = resume_file.split(",")[0].strip("()' ")
-                        resume_file = os.path.splitext(resume_file)[0]
-                        resume_file = resume_file + ".txt"
-                        print("Name:", resume_file)
-                        content = download_textfile("cvai-92a44.appspot.com", "processed_resume" + "/" + resume_file)
-                        data.append({'Filename': resume_file.split('/')[-1].rsplit('.', 1)[0], 'Content': content, 'URL': url})
+                    if selected_option == 'Cosine Similarity':
+                        st.subheader(f"Top {top_n} resumes matching the selected Job Description")
+                        data = []
+                        resumes = list_files('CVs')
+                        for resume_file, url in resumes:
+                            print("")
+                            resume_file = str(resume_file)
+                            resume_file = resume_file.split(",")[0].strip("()' ")
+                            resume_file = os.path.splitext(resume_file)[0]
+                            resume_file = resume_file + ".txt"
+                            print("Name:", resume_file)
+                            content = download_textfile("cvai-92a44.appspot.com", "processed_resume" + "/" + resume_file)
+                            data.append({'Filename': resume_file, 'Content': content, 'URL': url})
 
-                    df = pd.DataFrame(data)
+                        df = pd.DataFrame(data)
 
-                    csv_file_path = 'processed_resumes.csv'
-                    df.to_csv(csv_file_path, index=False)
-                    
-                    index = resume_embedding(df)
-                    clicked_file = os.path.splitext(clicked_file)[0]
-                    clicked_file = clicked_file + ".txt"
-                    print("Clicked_file_nme:",clicked_file)
-                    jd_content = download_textfile('cvai-92a44.appspot.com', "processed_jd" + "/" + clicked_file)
-                    jd_embed = jd_embedding(jd_content)
-                    
-                    distances, indices = index.search(np.array([jd_embed]), top_n)
-                    top_resumes = df.iloc[indices[0]].reset_index(drop=True)
-                    for idx, a in top_resumes.iterrows():
+                        csv_file_path = 'processed_resumes.csv'
+                        df.to_csv(csv_file_path, index=False)
+                        
+                        index = resume_embedding(df)
+                        clicked_file = os.path.splitext(clicked_file)[0]
+                        clicked_file = clicked_file + ".txt"
+                        jd_content = download_textfile('cvai-92a44.appspot.com', "processed_jd" + "/" + clicked_file)
+                        jd_embed = jd_embedding(jd_content)
+                        
+                        distances, indices = index.search(np.array([jd_embed]), top_n)
+
+                        similarity_scores = list(distances[0])
+                        top_resumes = df.iloc[indices[0]].reset_index(drop=True)
+                        top_resumes['Score'] = similarity_scores
+
+
+
+                    elif selected_option == 'OpenAI-Score':
+                        pass
+
+                    elif selected_option == 'Gemini-Score':
+                        clicked_file = os.path.splitext(clicked_file)[0]
+                        clicked_file = clicked_file + ".txt"
+                        jd_file = clicked_file
+                        folder_name = "processed_resume"
+                        resumes_list = list_files(folder_name)
+
+                        top_resumes = get_match_scores_for_jd(jd_file, resumes_list, "gemini")
+
+                    elif selected_option == 'Claude-Score':
+                        pass
+
+                    for idx, a in top_resumes.head(top_n).iterrows():  
                         col1, col2 = st.columns([3, 1])
                         with col1:
                             file_name = a['Filename']
-                            f2 = download_textfile("cvai-92a44.appspot.com", "summary_resume" + "/" + file_name + ".txt")
+                            f2 = download_textfile("cvai-92a44.appspot.com", "summary_resume" + "/" + file_name)
                             f2 = f2[:150] + "..."
-                            button_label = f"""{file_name}\n 
+                            button_label = f"""{file_name}\n
 \u00A0 \n
 {f2}"""
-                            st.button(button_label)
+                            st.button(button_label, disabled=True)
                         with col2:
+                            st.write(f"Score: {a['Score']:.2f}")
                             st.markdown(f"[Open CV]({a['URL']})") 
                         st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -382,13 +480,12 @@ def main():
                         button_label = f"""{file_name}\n 
 \u00A0 \n
 {f2}"""
-                        st.button(button_label)
+                        st.button(button_label, disabled=True)
                     with col2:
                         st.markdown(f"[Open CV]({url})") 
                     st.markdown("<hr>", unsafe_allow_html=True)
 
 
-
-
 if __name__ == "__main__":
+
     main()
