@@ -1,4 +1,5 @@
 from firebase_admin import credentials, initialize_app, storage # type: ignore
+from firebase_admin import _apps
 
 from fastapi import HTTPException
 
@@ -16,12 +17,14 @@ class Firebase:
     
     def initialize():
 
-        cred = credentials.Certificate(service_account_key_file())
-        
-        initialize_app(cred, {
-            'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET"),
-            'databaseURL':os.getenv("FIREBASE_DATABASE_URL")
-        })
+        if not _apps:
+            cred = credentials.Certificate(service_account_key_file())
+            initialize_app(cred, {
+                'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET"),
+                'databaseURL': os.getenv("FIREBASE_DATABASE_URL")
+            })
+        else:
+            print("Firebase is already initialized.")
     
     async def uploadFile(file,folderName):
 
